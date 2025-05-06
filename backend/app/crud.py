@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
 from app.models import Item, ItemCreate, User, UserCreate, UserUpdate
-
+from app.models import UserRegister
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
     db_obj = User.model_validate(
@@ -52,3 +52,14 @@ def create_item(*, session: Session, item_in: ItemCreate, owner_id: uuid.UUID) -
     session.commit()
     session.refresh(db_item)
     return db_item
+def register_user(*, session: Session, user_in: UserRegister) -> User:
+    hashed_password = get_password_hash(user_in.password)
+    user_data = user_in.model_dump()
+    user_data["hashed_password"] = hashed_password
+    del user_data["password"]
+
+    db_user = User(**user_data)
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+    return db_user
