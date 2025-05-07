@@ -25,6 +25,9 @@ from app.models import (
     UserUpdateMe,
 )
 from app.utils import generate_new_account_email, send_email
+from app.crud import register_user
+from app.api.deps import get_db
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -224,3 +227,7 @@ def delete_user(
     session.delete(user)
     session.commit()
     return Message(message="User deleted successfully")
+
+@router.post("/register", response_model=UserPublic)
+def register(user_in: UserRegister, db: Session = Depends(get_db)):
+    return register_user(session=db, user_in=user_in)
