@@ -11,7 +11,7 @@ class UserBase(SQLModel):
     is_superuser: bool = False
     full_name: str | None = Field(default=None, max_length=255)
 
-    # NEW FIELDS
+    # NEW FIELDS Added 
     company_name: str | None = Field(default=None, max_length=255)
     company_size: str | None = Field(default=None, max_length=50)
     industry_type: str | None = Field(default=None, max_length=100)
