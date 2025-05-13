@@ -43,24 +43,39 @@
 #     uv sync
 
 # CMD ["fastapi", "run", "--workers", "4", "app/main.py"]
-# Stage 1: Builder
+# Stage 1: Builder - install dependencies and create virtual environment
 FROM python:3.10 as builder
 
 WORKDIR /app
-COPY . .
 
-RUN pip install uv && \
-    uv pip install -r <(uv pip compile pyproject.toml) && \
+# Install UV (Astral's fast Python installer)
+COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
+
+# Copy only the necessary files for dependency installation
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies using UV
+RUN uv pip install -r <(uv pip compile pyproject.toml) && \
     uv venv
 
-# Stage 2: Runtime
+# Stage 2: Runtime - create the final lightweight image
 FROM python:3.10-slim
 
 WORKDIR /app
-COPY --from=builder /app /app
+
+# Copy only what's needed from the builder stage
 COPY --from=builder /app/.venv /app/.venv
+COPY . .
 
+# Environment variables
 ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH=/app
+ENV PYTHONPATH="/app"
+ENV PYTHONUNBUFFERED="1"
+ENV UV_COMPILE_BYTECODE="1"
+ENV UV_LINK_MODE="copy"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Ensure scripts are executable
+RUN chmod +x /app/scripts/*
+
+# Runtime command (adjust for your FastAPI app)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
