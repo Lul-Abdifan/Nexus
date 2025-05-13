@@ -43,50 +43,24 @@
 #     uv sync
 
 # CMD ["fastapi", "run", "--workers", "4", "app/main.py"]
+# Stage 1: Builder
+FROM python:3.10 as builder
 
-
-FROM python:3.10 AS base
-
-ENV PYTHONUNBUFFERED=1
-WORKDIR /app/
-
-# Copy the entire project context into the container
+WORKDIR /app
 COPY . .
 
-# Install dependencies using uv
-# First stage for installing the uv and syncing dependencies
-FROM ghcr.io/astral-sh/uv:0.5.11 AS uv-install
+RUN pip install uv && \
+    uv pip install -r <(uv pip compile pyproject.toml) && \
+    uv venv
 
-COPY --from=base /app /app
+# Stage 2: Runtime
+FROM python:3.10-slim
+
 WORKDIR /app
+COPY --from=builder /app /app
+COPY --from=builder /app/.venv /app/.venv
 
-# Sync the project with the frozen dependencies
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project
-
-# Final image that includes everything
-FROM python:3.10 AS final
-
-# Set up working directory
-WORKDIR /app
-
-# Copy the project files from the previous build stages
-COPY --from=uv-install /app /app
-COPY ./scripts /app/scripts
-COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
-COPY ./app /app/app
-
-# Install uv and other dependencies
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync
-
-# Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
-ENV UV_COMPILE_BYTECODE=1
-ENV UV_LINK_MODE=copy
 ENV PYTHONPATH=/app
 
-# Final command to run the FastAPI app using uvicorn
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
