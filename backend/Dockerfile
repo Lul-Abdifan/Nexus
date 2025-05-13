@@ -44,6 +44,7 @@
 
 # CMD ["fastapi", "run", "--workers", "4", "app/main.py"]
 # Stage 1: Builder - install dependencies and create virtual environment
+# Stage 1: Build - install dependencies and set up the environment
 FROM python:3.10 as builder
 
 WORKDIR /app
@@ -52,7 +53,7 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
 
 # Copy only the necessary files for dependency installation
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock ./ 
 
 # Install dependencies using UV
 RUN uv pip compile pyproject.toml && \
@@ -67,7 +68,7 @@ WORKDIR /app
 
 # Copy only what's needed from the builder stage
 COPY --from=builder /app/.venv /app/.venv
-COPY . .
+COPY . . 
 
 # Environment variables
 ENV PATH="/app/.venv/bin:$PATH"
