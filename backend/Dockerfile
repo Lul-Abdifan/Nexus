@@ -55,8 +55,10 @@ COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies using UV
-RUN uv pip install -r <(uv pip compile pyproject.toml) && \
+RUN uv pip compile pyproject.toml && \
+    pip install -r dist/requirements.txt && \
     uv venv
+
 
 # Stage 2: Runtime - create the final lightweight image
 FROM python:3.10-slim
